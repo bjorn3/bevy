@@ -64,8 +64,8 @@ impl Plugin for LogPlugin {
 
             #[cfg(not(feature = "tracing-chrome"))]
             {
-                bevy_utils::tracing::subscriber::set_global_default(subscriber)
-                    .expect("Could not set global default tracing subscriber");
+                // This may error when setting a subscriber twice. Just ignore it.
+                let _ = bevy_utils::tracing::subscriber::set_global_default(subscriber);
             }
         }
 

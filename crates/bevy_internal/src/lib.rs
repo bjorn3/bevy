@@ -44,6 +44,11 @@ pub mod math {
     pub use bevy_math::*;
 }
 
+pub mod persist {
+    // FIXME add doc
+    pub use bevy_persist::*;
+}
+
 pub mod property {
     //! Dynamically interact with struct fields and names.
     pub use bevy_property::*;
