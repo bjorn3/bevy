@@ -13,7 +13,7 @@ pub mod prelude {
 }
 
 use bevy_app::prelude::*;
-use bevy_persist::ResourcesExt;
+use bevy_persist::RestoreResource;
 
 pub struct WindowPlugin {
     pub add_primary_window: bool,
@@ -37,8 +37,8 @@ impl Plugin for WindowPlugin {
             .add_event::<WindowCloseRequested>()
             .add_event::<CloseWindow>()
             .add_event::<CursorMoved>()
-            .add_event::<ReceivedCharacter>();
-        app.resources_mut().add_raw_preserve_resource(Windows::default());
+            .add_event::<ReceivedCharacter>()
+            .add_raw_restore_resource(Windows::default());
 
         if self.add_primary_window {
             let resources = app.resources();

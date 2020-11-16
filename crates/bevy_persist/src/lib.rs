@@ -41,7 +41,7 @@ pub fn load_game(name: &str) {
         persist_context_inner.lock().unwrap().should_reload = false;
         let game = libloading::Library::new(&lib_path).unwrap();
         unsafe {
-            let func: libloading::Symbol<fn(PersistApp)> = game.get(b"__bevy_the_game").unwrap();
+            let func: libloading::Symbol<fn(AppBuilder)> = game.get(b"__bevy_the_game").unwrap();
             func(PersistContextInner::new_app(&persist_context_inner));
         }
     }
@@ -58,74 +58,18 @@ struct PersistContextInner {
     raw_resources: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
 }
 
-pub struct PersistApp {
-    app: AppBuilder,
-}
-
-impl PersistApp {
-    pub fn no_peristence() -> Self {
-        PersistApp { app: App::build() }
-    }
-
-    pub fn add_resource<T: Send + Sync + 'static>(&mut self, res: T) -> &mut Self {
-        self.app.add_resource(res);
-        self
-    }
-
-    pub fn add_serde_preserve_resource<T>(&mut self, res: T) -> &mut Self
-    where
-        T: serde::Serialize + for<'a> serde::Deserialize<'a> + Send + Sync + 'static,
-    {
-        self.app.resources_mut().add_serde_preserve_resource(res);
-        self
-    }
-
-    pub fn add_raw_preserve_resource<T>(&mut self, res: T) -> &mut Self
-    where
-        T: Send + Sync + 'static,
-    {
-        self.app.resources_mut().add_raw_preserve_resource(res);
-        self
-    }
-
-    pub fn add_startup_system(&mut self, system: Box<dyn System>) -> &mut Self {
-        self.app.add_startup_system(system);
-        self
-    }
-
-    pub fn add_system(&mut self, system: Box<dyn System>) -> &mut Self {
-        self.app.add_system(system);
-        self
-    }
-
-    pub fn add_plugins(&mut self, plugins: impl PluginGroup) -> &mut Self {
-        self.app.add_plugins(plugins);
-        self
-    }
-
-    pub fn set_runner(&mut self, runner: impl Fn(App) + 'static) -> &mut Self {
-        self.app.set_runner(runner);
-        self
-    }
-
-    pub fn run(&mut self) {
-        self.app.run();
-    }
-}
-
-pub trait ResourcesExt {
-    fn add_serde_preserve_resource<T>(&mut self, res: T)
+pub trait RestoreResource {
+    fn add_serde_restore_resource<T>(&mut self, res: T) -> &mut Self
     where
         T: serde::Serialize + for<'a> serde::Deserialize<'a> + Send + Sync + 'static;
 
-    fn add_raw_preserve_resource<T>(&mut self, res: T)
+    fn add_raw_restore_resource<T>(&mut self, res: T) -> &mut Self
     where
         T: Send + Sync + 'static;
 }
 
-// FIXME make AppBuilderExt instead
-impl ResourcesExt for Resources {
-    fn add_serde_preserve_resource<T>(&mut self, mut res: T)
+impl RestoreResource for Resources {
+    fn add_serde_restore_resource<T>(&mut self, mut res: T) -> &mut Self
     where
         T: serde::Serialize + for<'a> serde::Deserialize<'a> + Send + Sync + 'static,
     {
@@ -152,9 +96,10 @@ impl ResourcesExt for Resources {
             }
         }
         self.insert(res);
+        self
     }
 
-    fn add_raw_preserve_resource<T>(&mut self, mut res: T)
+    fn add_raw_restore_resource<T>(&mut self, mut res: T) -> &mut Self
     where
         T: Send + Sync + 'static,
     {
@@ -183,18 +128,35 @@ impl ResourcesExt for Resources {
             }
         }
         self.insert(res);
+        self
     }
 }
 
+impl RestoreResource for AppBuilder {
+    fn add_serde_restore_resource<T>(&mut self, res: T) -> &mut Self
+    where
+        T: serde::Serialize + for<'a> serde::Deserialize<'a> + Send + Sync + 'static {
+            self.resources_mut().add_serde_restore_resource(res);
+            self
+        }
+
+    fn add_raw_restore_resource<T>(&mut self, res: T) -> &mut Self
+    where
+        T: Send + Sync + 'static {
+            self.resources_mut().add_raw_restore_resource(res);
+            self
+        }
+}
+
 impl PersistContextInner {
-    fn new_app(this: &Arc<Mutex<Self>>) -> PersistApp {
+    fn new_app(this: &Arc<Mutex<Self>>) -> AppBuilder {
         let mut app = App::build();
         app.add_system_to_stage_front(stage::LAST, probe_for_reload.thread_local_system());
         app.add_resource(PersistContext {
             inner: this.clone(),
             resources_save: vec![],
         });
-        PersistApp { app }
+        app
     }
 }
 

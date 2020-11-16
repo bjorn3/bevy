@@ -1,14 +1,14 @@
-use bevy::{app::AppExit, persist::PersistApp, prelude::*, winit::WinitConfig};
+use bevy::{app::AppExit, persist::RestoreResource, prelude::*, winit::WinitConfig};
 
 #[no_mangle]
-pub fn __bevy_the_game(mut app: PersistApp) {
+pub fn __bevy_the_game(mut app: AppBuilder) {
     println!("loaded");
     app.add_resource(WinitConfig {
         return_from_run: true,
     })
     .add_plugins(DefaultPlugins)
-    .add_serde_preserve_resource(Scoreboard { score: 0 })
-    .add_raw_preserve_resource(Scoreboard2 { score: 0 })
+    .add_serde_restore_resource(Scoreboard { score: 0 })
+    .add_raw_restore_resource(Scoreboard2 { score: 0 })
     .add_startup_system(setup.system())
     .add_system(click_handler.system())
     .run();
