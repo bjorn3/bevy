@@ -46,7 +46,7 @@ pub fn load_game(name: &str) {
 }
 
 pub struct PersistContext {
-    serde_resources_save: Vec<Box<dyn FnOnce(&mut Resources) + Send + Sync>>,
+    resources_save: Vec<Box<dyn FnOnce(&mut Resources) + Send + Sync>>,
     inner: Arc<Mutex<PersistContextInner>>,
 }
 
@@ -74,7 +74,7 @@ impl PersistApp {
             .resources_mut()
             .get_mut::<PersistContext>()
             .unwrap();
-        ctx.serde_resources_save.push(Box::new(|res| {
+        ctx.resources_save.push(Box::new(|res| {
             let serialized = bincode::serialize(&*res.get::<T>().unwrap()).unwrap();
             res.get::<PersistContext>()
                 .unwrap()
@@ -120,7 +120,7 @@ impl PersistContextInner {
         app.add_system_to_stage_front(stage::FIRST, probe_for_reload.thread_local_system());
         app.add_resource(PersistContext {
             inner: this.clone(),
-            serde_resources_save: vec![],
+            resources_save: vec![],
         });
         PersistApp { app }
     }
@@ -135,23 +135,15 @@ fn probe_for_reload(_: &mut World, res: &mut Resources) {
         .unwrap()
         .should_reload;
     if should_reload {
-        let serde_resources_save = std::mem::take(
+        let resources_save = std::mem::take(
             &mut res
                 .get_mut::<PersistContext>()
                 .unwrap()
-                .serde_resources_save,
+                .resources_save,
         );
-        for resource_save in serde_resources_save {
+        for resource_save in resources_save {
             resource_save(&mut *res);
         }
-        dbg!(
-            &res.get_mut::<PersistContext>()
-                .unwrap()
-                .inner
-                .lock()
-                .unwrap()
-                .serde_resources
-        );
         res.get_mut::<Events<AppExit>>().unwrap().send(AppExit);
     }
 }
