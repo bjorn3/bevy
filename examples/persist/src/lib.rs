@@ -17,6 +17,7 @@ pub fn __bevy_the_game(mut app: PersistApp) {
             if app_exit_event_reader.latest(&app_exit_events).is_some() {
                 break;
             }
+            std::thread::sleep(std::time::Duration::from_millis(300));
         }
         }
     })
@@ -32,6 +33,6 @@ fn click_handler(/*key_input: Res<Input<KeyCode>>, */ mut score: ResMut<Scoreboa
     //println!("a");
     //if key_input.just_pressed(KeyCode::Space) {
     score.score += 1;
-    println!("n{}", score.score);
+    println!("a{}", score.score);
     //}
 }
