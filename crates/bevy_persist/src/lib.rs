@@ -64,9 +64,7 @@ pub struct PersistApp {
 
 impl PersistApp {
     pub fn no_peristence() -> Self {
-        PersistApp {
-            app: App::build(),
-        }
+        PersistApp { app: App::build() }
     }
 
     pub fn add_resource<T: Send + Sync + 'static>(&mut self, res: T) -> &mut Self {
@@ -74,11 +72,53 @@ impl PersistApp {
         self
     }
 
-    pub fn add_serde_preserve_resource<T>(&mut self, mut res: T) -> &mut Self
+    pub fn add_serde_preserve_resource<T>(&mut self, res: T) -> &mut Self
     where
         T: serde::Serialize + for<'a> serde::Deserialize<'a> + Send + Sync + 'static,
     {
-        if let Some(mut ctx) = self.app.resources_mut().get_mut::<PersistContext>() {
+        self.app.resources_mut().add_serde_preserve_resource(res);
+        self
+    }
+
+    pub fn add_raw_preserve_resource<T>(&mut self, res: T) -> &mut Self
+    where
+        T: Send + Sync + 'static,
+    {
+        self.app.resources_mut().add_raw_preserve_resource(res);
+        self
+    }
+
+    pub fn add_system(&mut self, system: Box<dyn System>) -> &mut Self {
+        self.app.add_system(system);
+        self
+    }
+
+    pub fn set_runner(&mut self, runner: impl Fn(App) + 'static) -> &mut Self {
+        self.app.set_runner(runner);
+        self
+    }
+
+    pub fn run(&mut self) {
+        self.app.run();
+    }
+}
+
+pub trait ResourcesExt {
+    fn add_serde_preserve_resource<T>(&mut self, res: T)
+    where
+        T: serde::Serialize + for<'a> serde::Deserialize<'a> + Send + Sync + 'static;
+
+    fn add_raw_preserve_resource<T>(&mut self, res: T)
+    where
+        T: Send + Sync + 'static;
+}
+
+impl ResourcesExt for Resources {
+    fn add_serde_preserve_resource<T>(&mut self, mut res: T)
+    where
+        T: serde::Serialize + for<'a> serde::Deserialize<'a> + Send + Sync + 'static,
+    {
+        if let Some(mut ctx) = self.get_mut::<PersistContext>() {
             ctx.resources_save.push(Box::new(|res| {
                 let serialized = bincode::serialize(&*res.get::<T>().unwrap()).unwrap();
                 res.get::<PersistContext>()
@@ -100,15 +140,14 @@ impl PersistApp {
                 res = bincode::deserialize(serialized).unwrap();
             }
         }
-        self.app.add_resource(res);
-        self
+        self.insert(res);
     }
 
-    pub fn add_raw_preserve_resource<T>(&mut self, mut res: T) -> &mut Self
+    fn add_raw_preserve_resource<T>(&mut self, mut res: T)
     where
         T: Send + Sync + 'static,
     {
-        if let Some(mut ctx) = self.app.resources_mut().get_mut::<PersistContext>() {
+        if let Some(mut ctx) = self.get_mut::<PersistContext>() {
             ctx.resources_save.push(Box::new(|res| {
                 let raw = res.take_global_only_resource::<T>().unwrap();
                 res.get::<PersistContext>()
@@ -132,22 +171,7 @@ impl PersistApp {
                     .unwrap_or_else(|_| unreachable!("Wrong type"));
             }
         }
-        self.app.add_resource(res);
-        self
-    }
-
-    pub fn add_system(&mut self, system: Box<dyn System>) -> &mut Self {
-        self.app.add_system(system);
-        self
-    }
-
-    pub fn set_runner(&mut self, runner: impl Fn(App) + 'static) -> &mut Self {
-        self.app.set_runner(runner);
-        self
-    }
-
-    pub fn run(&mut self) {
-        self.app.run();
+        self.insert(res);
     }
 }
 
