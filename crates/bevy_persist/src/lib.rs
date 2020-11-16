@@ -88,8 +88,18 @@ impl PersistApp {
         self
     }
 
+    pub fn add_startup_system(&mut self, system: Box<dyn System>) -> &mut Self {
+        self.app.add_startup_system(system);
+        self
+    }
+
     pub fn add_system(&mut self, system: Box<dyn System>) -> &mut Self {
         self.app.add_system(system);
+        self
+    }
+
+    pub fn add_plugins(&mut self, plugins: impl PluginGroup) -> &mut Self {
+        self.app.add_plugins(plugins);
         self
     }
 
@@ -113,6 +123,7 @@ pub trait ResourcesExt {
         T: Send + Sync + 'static;
 }
 
+// FIXME make AppBuilderExt instead
 impl ResourcesExt for Resources {
     fn add_serde_preserve_resource<T>(&mut self, mut res: T)
     where

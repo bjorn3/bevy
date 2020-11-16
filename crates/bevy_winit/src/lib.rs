@@ -12,6 +12,7 @@ pub use winit_windows::*;
 use bevy_app::{prelude::*, AppExit};
 use bevy_ecs::{Resources, World};
 use bevy_math::Vec2;
+use bevy_persist::ResourcesExt;
 use bevy_utils::tracing::trace;
 use bevy_window::{
     CreateWindow, CursorMoved, ReceivedCharacter, Window, WindowCloseRequested, WindowCreated,
@@ -27,11 +28,11 @@ pub struct WinitPlugin;
 
 impl Plugin for WinitPlugin {
     fn build(&self, app: &mut AppBuilder) {
+        app.resources_mut().add_raw_preserve_resource(WinitWindows::default());
         app
             // TODO: It would be great to provide a raw winit WindowEvent here, but the lifetime on it is
             // stopping us. there are plans to remove the lifetime: https://github.com/rust-windowing/winit/pull/1456
             // .add_event::<winit::event::WindowEvent>()
-            .init_resource::<WinitWindows>()
             .set_runner(winit_runner)
             .add_system(change_window);
     }
