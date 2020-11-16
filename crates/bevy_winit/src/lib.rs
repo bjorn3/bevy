@@ -141,11 +141,11 @@ where
 }
 
 pub fn winit_runner(mut app: App) {
-    let mut event_loop = EventLoop::new();
+    let mut event_loop: EventLoop<()> = /*winit::platform::unix::EventLoopExtUnix::new_any_thread();*/EventLoop::new();
     let mut create_window_event_reader = EventReader::<CreateWindow>::default();
     let mut app_exit_event_reader = EventReader::<AppExit>::default();
 
-    app.resources.insert_thread_local(event_loop.create_proxy());
+    //app.resources.insert_thread_local(event_loop.create_proxy());
 
     app.initialize();
 

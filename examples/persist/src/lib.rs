@@ -1,4 +1,4 @@
-use bevy::{persist::PersistApp, prelude::*, winit::WinitConfig, app::AppExit};
+use bevy::{app::AppExit, persist::PersistApp, prelude::*, winit::WinitConfig};
 
 #[no_mangle]
 pub fn __bevy_the_game(mut app: PersistApp) {
@@ -14,11 +14,11 @@ pub fn __bevy_the_game(mut app: PersistApp) {
         loop {
             app.update();
             if let Some(app_exit_events) = app.resources.get_mut::<Events<AppExit>>() {
-            if app_exit_event_reader.latest(&app_exit_events).is_some() {
-                break;
+                if app_exit_event_reader.latest(&app_exit_events).is_some() {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(300));
             }
-            std::thread::sleep(std::time::Duration::from_millis(300));
-        }
         }
     })
     .run();

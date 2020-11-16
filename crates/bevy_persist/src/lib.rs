@@ -135,12 +135,8 @@ fn probe_for_reload(_: &mut World, res: &mut Resources) {
         .unwrap()
         .should_reload;
     if should_reload {
-        let resources_save = std::mem::take(
-            &mut res
-                .get_mut::<PersistContext>()
-                .unwrap()
-                .resources_save,
-        );
+        let resources_save =
+            std::mem::take(&mut res.get_mut::<PersistContext>().unwrap().resources_save);
         for resource_save in resources_save {
             resource_save(&mut *res);
         }
