@@ -63,6 +63,12 @@ pub struct PersistApp {
 }
 
 impl PersistApp {
+    pub fn no_peristence() -> Self {
+        PersistApp {
+            app: App::build(),
+        }
+    }
+
     pub fn add_resource<T: Send + Sync + 'static>(&mut self, res: T) -> &mut Self {
         self.app.add_resource(res);
         self
@@ -72,32 +78,28 @@ impl PersistApp {
     where
         T: serde::Serialize + for<'a> serde::Deserialize<'a> + Send + Sync + 'static,
     {
-        let mut ctx = self
-            .app
-            .resources_mut()
-            .get_mut::<PersistContext>()
-            .unwrap();
-        ctx.resources_save.push(Box::new(|res| {
-            let serialized = bincode::serialize(&*res.get::<T>().unwrap()).unwrap();
-            res.get::<PersistContext>()
-                .unwrap()
+        if let Some(mut ctx) = self.app.resources_mut().get_mut::<PersistContext>() {
+            ctx.resources_save.push(Box::new(|res| {
+                let serialized = bincode::serialize(&*res.get::<T>().unwrap()).unwrap();
+                res.get::<PersistContext>()
+                    .unwrap()
+                    .inner
+                    .lock()
+                    .unwrap()
+                    .serde_resources
+                    .insert(std::any::type_name::<T>(), serialized);
+            }));
+
+            if let Some(serialized) = ctx
                 .inner
                 .lock()
                 .unwrap()
                 .serde_resources
-                .insert(std::any::type_name::<T>(), serialized);
-        }));
-
-        if let Some(serialized) = ctx
-            .inner
-            .lock()
-            .unwrap()
-            .serde_resources
-            .get(std::any::type_name::<T>())
-        {
-            res = bincode::deserialize(serialized).unwrap();
+                .get(std::any::type_name::<T>())
+            {
+                res = bincode::deserialize(serialized).unwrap();
+            }
         }
-        std::mem::drop(ctx);
         self.app.add_resource(res);
         self
     }
@@ -106,34 +108,30 @@ impl PersistApp {
     where
         T: Send + Sync + 'static,
     {
-        let mut ctx = self
-            .app
-            .resources_mut()
-            .get_mut::<PersistContext>()
-            .unwrap();
-        ctx.resources_save.push(Box::new(|res| {
-            let raw = res.take_global_only_resource::<T>().unwrap();
-            res.get::<PersistContext>()
-                .unwrap()
+        if let Some(mut ctx) = self.app.resources_mut().get_mut::<PersistContext>() {
+            ctx.resources_save.push(Box::new(|res| {
+                let raw = res.take_global_only_resource::<T>().unwrap();
+                res.get::<PersistContext>()
+                    .unwrap()
+                    .inner
+                    .lock()
+                    .unwrap()
+                    .raw_resources
+                    .insert(TypeId::of::<T>(), Box::new(raw));
+            }));
+
+            if let Some(stored_res) = ctx
                 .inner
                 .lock()
                 .unwrap()
                 .raw_resources
-                .insert(TypeId::of::<T>(), Box::new(raw));
-        }));
-
-        if let Some(stored_res) = ctx
-            .inner
-            .lock()
-            .unwrap()
-            .raw_resources
-            .remove(&TypeId::of::<T>())
-        {
-            res = *(stored_res as Box<dyn Any>)
-                .downcast::<T>()
-                .unwrap_or_else(|_| unreachable!("Wrong type"));
+                .remove(&TypeId::of::<T>())
+            {
+                res = *(stored_res as Box<dyn Any>)
+                    .downcast::<T>()
+                    .unwrap_or_else(|_| unreachable!("Wrong type"));
+            }
         }
-        std::mem::drop(ctx);
         self.app.add_resource(res);
         self
     }
