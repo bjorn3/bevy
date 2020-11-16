@@ -7,6 +7,7 @@ pub fn __bevy_the_game(mut app: PersistApp) {
         return_from_run: true,
     })
     .add_serde_preserve_resource(Scoreboard { score: 0 })
+    .add_raw_preserve_resource(Scoreboard2 { score: 0 })
     .add_system(click_handler.system())
     .set_runner(|mut app: App| {
         app.initialize();
@@ -29,10 +30,19 @@ struct Scoreboard {
     score: usize,
 }
 
-fn click_handler(/*key_input: Res<Input<KeyCode>>, */ mut score: ResMut<Scoreboard>) {
+struct Scoreboard2 {
+    score: usize,
+}
+
+fn click_handler(
+    /*key_input: Res<Input<KeyCode>>, */
+    mut score: ResMut<Scoreboard>,
+    mut score2: ResMut<Scoreboard2>,
+) {
     //println!("a");
     //if key_input.just_pressed(KeyCode::Space) {
     score.score += 1;
-    println!("a{}", score.score);
+    score2.score += 1;
+    println!("a{},{}", score.score, score2.score);
     //}
 }

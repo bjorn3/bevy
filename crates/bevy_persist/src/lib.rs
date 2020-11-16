@@ -1,4 +1,5 @@
 use std::{
+    any::{Any, TypeId},
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -14,6 +15,7 @@ pub fn load_game(name: &str) {
     let persist_context_inner = Arc::new(Mutex::new(PersistContextInner {
         should_reload: false,
         serde_resources: HashMap::default(),
+        raw_resources: HashMap::default(),
     }));
 
     let lib_path = std::env::current_exe()
@@ -53,6 +55,7 @@ pub struct PersistContext {
 struct PersistContextInner {
     should_reload: bool,
     serde_resources: HashMap<&'static str, Vec<u8>>,
+    raw_resources: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
 }
 
 pub struct PersistApp {
@@ -99,6 +102,42 @@ impl PersistApp {
         self
     }
 
+    pub fn add_raw_preserve_resource<T>(&mut self, mut res: T) -> &mut Self
+    where
+        T: Send + Sync + 'static,
+    {
+        let mut ctx = self
+            .app
+            .resources_mut()
+            .get_mut::<PersistContext>()
+            .unwrap();
+        ctx.resources_save.push(Box::new(|res| {
+            let raw = res.take_global_only_resource::<T>().unwrap();
+            res.get::<PersistContext>()
+                .unwrap()
+                .inner
+                .lock()
+                .unwrap()
+                .raw_resources
+                .insert(TypeId::of::<T>(), Box::new(raw));
+        }));
+
+        if let Some(stored_res) = ctx
+            .inner
+            .lock()
+            .unwrap()
+            .raw_resources
+            .remove(&TypeId::of::<T>())
+        {
+            res = *(stored_res as Box<dyn Any>)
+                .downcast::<T>()
+                .unwrap_or_else(|_| unreachable!("Wrong type"));
+        }
+        std::mem::drop(ctx);
+        self.app.add_resource(res);
+        self
+    }
+
     pub fn add_system(&mut self, system: Box<dyn System>) -> &mut Self {
         self.app.add_system(system);
         self
@@ -117,7 +156,7 @@ impl PersistApp {
 impl PersistContextInner {
     fn new_app(this: &Arc<Mutex<Self>>) -> PersistApp {
         let mut app = App::build();
-        app.add_system_to_stage_front(stage::FIRST, probe_for_reload.thread_local_system());
+        app.add_system_to_stage_front(stage::LAST, probe_for_reload.thread_local_system());
         app.add_resource(PersistContext {
             inner: this.clone(),
             resources_save: vec![],
