@@ -46,7 +46,12 @@ impl Plugin for WindowPlugin {
                 .get::<WindowDescriptor>()
                 .map(|descriptor| (*descriptor).clone())
                 .unwrap_or_else(WindowDescriptor::default);
-            if resources.get::<Windows>().unwrap().get(WindowId::primary()).is_none() {
+            if resources
+                .get::<Windows>()
+                .unwrap()
+                .get(WindowId::primary())
+                .is_none()
+            {
                 let mut create_window_event = resources.get_mut::<Events<CreateWindow>>().unwrap();
                 create_window_event.send(CreateWindow {
                     id: WindowId::primary(),
@@ -57,7 +62,8 @@ impl Plugin for WindowPlugin {
 
         // If windows were persisted, we will need to make everyone aware of them again.
         {
-            let mut window_created_events = app.resources().get_mut::<Events<WindowCreated>>().unwrap();
+            let mut window_created_events =
+                app.resources().get_mut::<Events<WindowCreated>>().unwrap();
             for window in app.resources().get::<Windows>().unwrap().iter() {
                 window_created_events.send(WindowCreated { id: window.id() });
             }

@@ -12,7 +12,7 @@ pub use winit_windows::*;
 use bevy_app::{prelude::*, AppExit};
 use bevy_ecs::{Resources, World};
 use bevy_math::Vec2;
-use bevy_persist::RestoreResource;
+use bevy_persist::{AppReload, RestoreResource};
 use bevy_utils::tracing::trace;
 use bevy_window::{
     CreateWindow, CursorMoved, ReceivedCharacter, Window, WindowCloseRequested, WindowCreated,
@@ -145,6 +145,7 @@ pub fn winit_runner(mut app: App) {
     let mut event_loop: EventLoop<()> = /*winit::platform::unix::EventLoopExtUnix::new_any_thread();*/EventLoop::new();
     let mut create_window_event_reader = EventReader::<CreateWindow>::default();
     let mut app_exit_event_reader = EventReader::<AppExit>::default();
+    let mut app_reload_event_reader = EventReader::<AppReload>::default();
 
     //app.resources.insert_thread_local(event_loop.create_proxy());
 
@@ -164,6 +165,11 @@ pub fn winit_runner(mut app: App) {
 
         if let Some(app_exit_events) = app.resources.get_mut::<Events<AppExit>>() {
             if app_exit_event_reader.latest(&app_exit_events).is_some() {
+                *control_flow = ControlFlow::Exit;
+            }
+        }
+        if let Some(app_reload_events) = app.resources.get_mut::<Events<AppReload>>() {
+            if app_reload_event_reader.latest(&app_reload_events).is_some() {
                 *control_flow = ControlFlow::Exit;
             }
         }

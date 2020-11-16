@@ -1,4 +1,4 @@
-use bevy::{app::AppExit, persist::RestoreResource, prelude::*, winit::WinitConfig};
+use bevy::{persist::RestoreResource, prelude::*, winit::WinitConfig};
 
 #[no_mangle]
 pub fn __bevy_the_game(mut app: AppBuilder) {
@@ -53,7 +53,7 @@ fn click_handler(
     key_input: Res<Input<KeyCode>>,
     mut score: ResMut<Scoreboard>,
     mut score2: ResMut<Scoreboard2>,
-    mut query: Query<&mut Text, With<OurText>>
+    mut query: Query<&mut Text, With<OurText>>,
 ) {
     if key_input.just_pressed(KeyCode::Space) {
         score.score += 1;
