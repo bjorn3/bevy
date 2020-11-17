@@ -158,8 +158,8 @@ impl RestoreResource for AppBuilder {
 impl PersistContextInner {
     fn new_app(this: &Arc<Mutex<Self>>) -> AppBuilder {
         let mut app = App::build();
-        app.add_system_to_stage(stage::LAST, probe_for_exit.thread_local_system());
-        app.add_system_to_stage(stage::LAST, probe_for_reload.thread_local_system());
+        app.add_system_to_stage(stage::LAST, probe_for_exit);
+        app.add_system_to_stage(stage::LAST, probe_for_reload);
         app.add_resource(PersistContext {
             inner: this.clone(),
             resources_save: vec![],
