@@ -24,19 +24,24 @@ pub fn load_game(name: &str) {
         .parent()
         .unwrap()
         .join(format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX));
+    let lib_path2 = lib_path.clone();
 
     let persist_context_inner2 = persist_context_inner.clone();
     let (tx, rx) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
-        while let Ok(_) = rx.recv() {
-            persist_context_inner2.lock().unwrap().should_reload = true;
-        }
-    });
-
     let mut watcher = notify::watcher(tx, Duration::new(0, 0)).unwrap();
     watcher
         .watch(&lib_path, RecursiveMode::NonRecursive)
         .unwrap();
+
+    std::thread::spawn(move || {
+        while let Ok(_) = rx.recv() {
+            println!("Reloading...");
+            persist_context_inner2.lock().unwrap().should_reload = true;
+            watcher
+                .watch(&lib_path2, RecursiveMode::NonRecursive)
+                .unwrap();
+        }
+    });
 
     loop {
         persist_context_inner.lock().unwrap().should_reload = false;
